@@ -3,7 +3,6 @@ from crawler.writter import DataWriter
 from lxml import html
 from JsonParse import JsonParse
 import traceback
-from crawler.logger import Logger
 import json
 
 
@@ -34,21 +33,23 @@ headers = {'cata_id': 'id',
            'download_file': '文件名称',
            'download_size': '文件大小', }
 
-logger = Logger(__name__)
+
 
 
 def getdata(response):
     try:
         content = json.loads(response['text'])
-        parse = JsonParse()
-        parse.parse(content)
-        data.append(parse.getItems())
-        headers.update(parse.getHeaders())
-        logger.warn(data)
+        for item in content['data']:
+            parse = JsonParse()
+            parse.parse(item)
+            subtime = parse.getItems()
+            subtime['id'] = subtime['id'][0]
+            subtime['update_time'] = subtime['update_time'][0]
+            subtime['description'] = subtime['description'][0]
+            data.append(subtime)
+
     except Exception as e:
         traceback.print_exc()
-
-        # 信息解析不太对
 
 
 if __name__ == '__main__':
