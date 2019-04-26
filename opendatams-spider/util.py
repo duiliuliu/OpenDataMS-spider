@@ -10,8 +10,6 @@ def saveContent(path, content):
         f.write(content)
 
 
-# 统计数据集中空数据条目/所占比例
-
 # 判断空数据
 def isBlank(item, NonKeys=['NONE', 'NULL', 'NON']):
     if item is None or len(item) == 0 or item.strip().upper() in NonKeys:

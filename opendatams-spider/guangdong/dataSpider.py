@@ -1,6 +1,9 @@
 from sspider import Spider, Request, RequestManager, HtmlParser, XlsxWritter, JsonWritter
 import requests
 import time
+
+import sys
+sys.path.append('..')
 from util import saveContent
 
 # 如何运行该爬虫：
@@ -123,7 +126,8 @@ class DimensionParser(HtmlParser):
                 else:
                     item['是否可用'] = False
 
-                path = 'source/'+data['name']+'/' + item['name']+'.'+item['format']
+                path = 'source/'+data['name']+'/' + \
+                    item['name']+'.'+item['format']
                 # 保存文件
                 saveContent(path, res.content)
 

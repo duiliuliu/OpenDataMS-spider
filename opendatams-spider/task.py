@@ -2,8 +2,11 @@
 # author: pengr
 
 from util import createInstance
+from constants import NonData
 
 # 对相应的类容执行函数，
+
+nondata = NonData()
 
 
 class Task(object):
@@ -23,32 +26,39 @@ class Task(object):
         self.data = items
         return self
 
-    def filter(self, **kwcols):
-        self.runUDF('FilterFunc', module='task', **kwcols)
+    def filterNonData(self, col):
+        items = []
+        for item in self.data:
+            if item[col] != nondata:
+                items.append(item[col])
+        self.data = items
         return self
 
     def count(self, *cols):
-        res = {col: 0 for col in cols}
+        res = [0 for col in cols]
         for item in self.data:
-            for col in cols:
-                res[col] = res[col]+1 if item[col] is not None else res[col]
-        self.data = [res[col] for col in cols]
+            for idx in range(len(cols)):
+                res[idx] = res[idx]+1 if item[cols[idx]
+                                              ] != nondata else res[idx]
+        self.data = res
         return self
 
     def min(self, *cols):
-        res = {col: self.data[col] for col in cols}
+        res = [nondata for col in cols]
         for item in self.data:
-            for col in cols:
-                res[col] = item[col] if item[col] > res[col] else res[col]
-        self.data = [res[col] for col in cols]
+            for idx in range(len(cols)):
+                res[idx] = item[cols[idx]] if res[idx] == nondata or item[cols[idx]
+                                                                          ] < res[idx] else res[idx]
+        self.data = res
         return self
 
     def max(self, *cols):
-        res = {col: self.data[col] for col in cols}
+        res = [nondata for col in cols]
         for item in self.data:
-            for col in cols:
-                res[col] = item[col] if item[col] < res[col] else res[col]
-        self.data = [res[col] for col in cols]
+            for idx in range(len(cols)):
+                res[idx] = item[cols[idx]] if res[idx] == nondata or item[cols[idx]
+                                                                          ] > res[idx] else res[idx]
+        self.data = res
         return self
 
     @property
@@ -56,17 +66,28 @@ class Task(object):
         return self.data
 
 
-class CommonFunc(object):
-    def evaluate(self, *args, **kwargs):
-        raise NotImplementedError()
+if __name__ == '__main__':
+    numberData = [
+        [1, 2, 3, 4, 5],
+        [2, 4, 6, 8, 10],
+        [3, 6, 9, 12, 4]
+    ]
 
+    stringData = [
+        ['asda', 'asda', 'dwqwe', 'qweq'],
+        ['weqcas', 'defsw', 'deqwa', 'ewqwq']
+    ]
 
-class FilterFunc(CommonFunc):
+    nonTestData = [
+        ['asda', 'asda', 'dwqwe', 'qweq'],
+        ['weqcas', 'defsw', 'deqwa', 'ewqwq'],
+        [nondata, 'none', 'null', '']
+    ]
 
-    def evaluate(self,  **kwcols):
-        pass
+    task1 = Task(numberData)
+    task1.min(1, 3)
+    print(task1.result)
 
-
-class MinFunc(CommonFunc):
-    def evaluate(self, *args, **kwargs):
-        return super().evaluate(*args, **kwargs)
+    task2 = Task(nonTestData)
+    task2.count(0, 1, 2, 3)
+    print(task2.result)
