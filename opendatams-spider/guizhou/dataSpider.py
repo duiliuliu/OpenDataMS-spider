@@ -1,6 +1,5 @@
-from sspider import Spider, Request, HtmlParser, XlsxWritter, JsonWritter
+from sspider import Spider, Request, Response, HtmlParser, XlsxWritter, JsonWritter
 import requests
-from proxyPool import ProxyPool
 
 import sys
 sys.path.append('..')
@@ -18,8 +17,7 @@ from util import saveContent
 
 # url
 url = 'http://data.guizhou.gov.cn/dataopen/api/dataset'
-file_key = '贵州api'
-
+file_key = '贵州文件'
 
 # 请求沉睡时间，防止一瞬间过多的请求被目的网站封禁，单位：秒
 sleep_time = 0
@@ -39,7 +37,7 @@ def getParams(pageNo,):
         'name': '',
         'scoreLow': '',
         'scoreHigh': '',
-        'dataType': '1',
+        'dataType': '0',
         '_': '1555811371572'
     }
 
@@ -85,44 +83,19 @@ cataSpider.write(file_key+'catalog.xlsx', write_header=True)
 
 ############################################################################
 
-# 根据目录信息继续抓取api接口信息并进行测试接口
+# 根据目录信息继续抓取api接口信息并进行文件下载
 # 获取目录信息
 cata = cataSpider.getItems(type='dict')
 
-# 代理
-ppool = ProxyPool()
-
-url_template = 'http://data.guizhou.gov.cn/dataopen/api/dataset/{}/apidata?callback=jQuery111305121739185053189_1555829556219&_=1555829556226'
+url_template = 'http://data.guizhou.gov.cn/dataopen/api/filedata/{}?callback=jQuery111308858001035427423_1556328325340&_=1556328325344'
 
 # 根据目录构建请求,method='get',url,other_info为request可携带存储的与网络请求无关的信息，此处存储数据集名称,sleep_time表示睡眠一段时间后进行请求
-# 只需要目录数据以及接口信息则可以置sleep_time=0，如需要测试接口可用并下载接口数据，则需要调sleep_time为一个较大值，单位是秒，以防止网站封禁
-dimenRequests = [Request('get',
-                         url_template.format(i['id']), other_info=i, sleep_time=sleep_time) for i in cata]
-
-# 数据集详细页面有以下数据需要获取：
-# 1. 接口地址
-# 2. 支持格式
-# 3. 请求方式
-
-
-# 数据集api开放维度及其详细粒度支持：
-# 1. 接口地址是否可用
-# 2. 支持格式是否正确
-# 3. 是否有请求示例
-# 4. 是否存在请求参数说明
-# 5. 是否存在返回参数说明
-# 6. 是否存在返回示例
-
-# 维度常量
-API_AVALIABLE = '接口可用性'
-FORMAT_VALID = '格式是否匹配'
-REQUEST_DEMO = '请求示例'  # 是否存在请求示例
-RESPONSE_DEMO = '返回示例'  # 是否存在返回示例
-REQUEST_MODE = '请求参数说明'  # 是否存在请求参数说明
-RESPONSE_MODE = '返回参数说明'  # 是否存在返回参数说明
-
-
-# 针对接口网页中的维度解析
+dimenRequests = []
+for cata_item in cata:
+    for i in cata_item['list']:
+        dimenRequests.append(
+            Request('get', url_template.format(i['id']), other_info=cata_item)
+        )
 
 
 class DimensionParser(HtmlParser):
@@ -130,29 +103,28 @@ class DimensionParser(HtmlParser):
         data = response.jsonp()['data']
         #  获取请求中保存的信息
         item = response.request.other_info
+
+        if 'file' not in item:
+            item['file'] = []
         try:
-            item['接口地址'] = data['ifsAddr']
-            res = requests.get(data['ifsAddr'], proxies=ppool.push())
-            if res.status_code == 200 and res.text:
-                item['API_AVALIABLE'] = '可用'
-                # 如需下载接口数据，去掉下方注释即可
-                # path = 'source/'+item['name']+'.'+data['supportFormat']
-                # saveContent(path, res.content)
-            else:
-                item['API_AVALIABLE'] = '不可用'
-            if 'supportFormat' in data:
-                item['支持格式'] = data['supportFormat']
-                # 对格式验证
-                # pass
-                # item[FORMAT_VALID] = '可用'
-            item['请求方式'] = data['requestMode']
-            item[REQUEST_DEMO] = data['requestDemo']
-            item[REQUEST_MODE] = data['argsDesc']
-            item[RESPONSE_MODE] = data['returnValDesc']
-            item[RESPONSE_DEMO] = data['returnDemo']
-        except Exception as e:
-            item['API_AVALIABLE'] = '接口详情页面异常'+str(e)
-        # 返回下一次爬取的请求集合与解析到的数据
+            item['file'].append({
+                'id': data['id'],
+                'format': data['format'],
+                'name': data['name'],
+                'remark': data['remark'],
+                'shortUrl': data['shortUrl'],
+                'updateTime': data['updTime']
+            })
+        except:
+            item['file'].append(data['id']+'异常')
+
+        # 文件下载
+        download_url = 'http://gzopen.oss-cn-guizhou-a.aliyuncs.com/{}?OSSAccessKeyId=cRMkEl0MLhpV9l7g&Signature=nGRFRbzguzVp5QA3BnR9cx38LRk%3D'
+        res = requests.get(download_url.format(data['remark']))
+        dir = item['数据名称']+'/' if item['数据名称'] else '未知目录/'
+        path = 'source/'+dir+data['remark']
+        saveContent(path, res.content)
+
         return [], item
 
 
@@ -165,4 +137,4 @@ dimenSpider = Spider(parser=DimensionParser(), writter=dimenInfoWritter)
 dimenSpider.run(dimenRequests)
 # 数据写入文件
 dimenSpider.write(file_key+'dimen.xlsx')
-# dimenSpider.write('dimen.json')
+# dimenSpider.write(file_key+'dimen.json')

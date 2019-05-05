@@ -3,6 +3,8 @@ import os
 
 
 def saveContent(path, content):
+    if os.path.exists(path):
+        return
     dir = os.path.dirname(path)
     if not os.path.exists(dir):
         os.makedirs(dir)
@@ -12,9 +14,9 @@ def saveContent(path, content):
 
 # 判断空数据
 def isBlank(item, NonKeys=['NONE', 'NULL', 'NON']):
-    if item is None or len(item) == 0 or item.strip().upper() in NonKeys:
+    if item is None or len(str(item)) == 0 or str(item).strip().upper() in NonKeys:
         return True
-    for ch in item:
+    for ch in str(item):
         if ch != ' ':
             return False
     return True

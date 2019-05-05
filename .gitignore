@@ -1,0 +1,22 @@
+# source
+source
+*xlsx
+*csv
+*json
+*xls
+*log
+script.md
+
+
+__pycache__
+
+# doc
+/doc
+
+# dist
+/dist
+/build
+*egg-info/
+
+
+
