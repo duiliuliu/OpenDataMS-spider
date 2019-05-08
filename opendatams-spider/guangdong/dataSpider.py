@@ -4,45 +4,6 @@ import time
 
 from datacommon import util
 
-# 通过filekey指定不同城市或者不同政府机构，支持以下四个
-filekey = '湛江'
-
-url_map = {
-    '湛江': {
-        'key': '湛江',
-        'url': 'http://www.gddata.gov.cn/index.php/data/ls/type/0/p/{}/v/333.html',
-        'maxpage': 4
-    },
-    '深圳': {
-        'key': '深圳',
-        'url': 'http://www.gddata.gov.cn/index.php/data/ls/type/0/p/{}/v/328.html',
-        'maxpage': 19
-    },
-    '省发展改革委': {
-        'key': '省发展改革委',
-        'url': 'http://www.gddata.gov.cn/index.php/data/ls/type/0/p/{}/d/11.html',
-        'maxpage': 3
-    },
-    '省文化和旅游厅': {
-        'key': '省文化和旅游厅',
-        'url': 'http://www.gddata.gov.cn/index.php/data/ls/type/0/p/{}/u/2/d/30.html',
-        'maxpage': 3
-    }
-}
-
-# 如何运行该爬虫：
-# 下载安装python环境
-# 下载安装爬虫库 sspider : 使用该命令即可`pip install sspider`
-
-# 广州开放数据 数据集request,page:163
-# type/0 数据集
-# type/1 api
-
-# range(1) 表示抓取1页，数据集共有163页，如需拆去全部数据，请改为163
-reqs = [Request(
-    'get', url_map[filekey]['url'].format(i)) for i in range(1, url_map[filekey]['maxpage'])]
-
-
 seed_url = 'http://www.gddata.gov.cn'
 
 # 获取数据集目录的解析器
@@ -71,6 +32,7 @@ class CatalogParser(HtmlParser):
 
         # data = [[seed_url + url.get('href'), url.xpath('string(.)')]
         #         for url in urls]
+
         return [], items
 
 
@@ -78,18 +40,8 @@ class CatalogParser(HtmlParser):
 writter = XlsxWritter(writeMode=XlsxWritter.WritterMode.EXTEND)
 
 # 建立爬虫对象，解析类是CatalogParser
-cataSpider = Spider(parser=CatalogParser(), writter=writter)
-cataSpider.run(reqs)
-cataSpider.write(filekey+'catalog.xlsx', write_header=True)
+cataSpider = Spider(name='cataSpider', parser=CatalogParser(), writter=writter)
 
-############################################################################
-
-# 根据目录信息继续抓取
-# 获取目录信息
-cata = cataSpider.getItems(type='dict')
-
-# 根据目录构建请求,method='get',url,other_info为request可携带存储的与网络请求无关的信息，此处存储数据集名称
-dimenRequests = [Request('get', i['url'], other_info=i) for i in cata]
 
 # 数据集详细页面有以下几种情况：
 # 1. 该网页不存在，被重定向
@@ -204,24 +156,89 @@ class DimensionParser(HtmlParser):
 # 将数据写进xlsx中，因为数据有多层嵌套，所以此时选择写入json文件中，如需要写入xlsx中，取消下方注释即可
 dimenInfoWritter = XlsxWritter(writeMode=XlsxWritter.WritterMode.APPEND)
 
-# json格式写入
-dimenSpider = Spider(parser=DimensionParser(), writter=dimenInfoWritter)
-# 运行爬虫
-dimenSpider.run(dimenRequests)
-# 数据写入文件
-dimenSpider.write(filekey+'dimen.xlsx', write_header=True)
+# 创建爬虫对象
+dimenSpider = Spider(
+    name='dimenSpider', parser=DimensionParser(), writter=dimenInfoWritter)
 
 
-# 同时将数据下载信息单独存储方便查看
-data = dimenSpider.getItems()
-otherWritter = XlsxWritter(writeMode=XlsxWritter.WritterMode.APPEND)
+if __name__ == '__main__':
+    # 通过filekey指定不同城市或者不同政府机构，支持以下四个
+    filekey = '全部'
 
-for item in data:
-    download_info = item[6]
-    for info_item in download_info:
-        info_item_temp = {}
-        info_item_temp['数据集'] = item[1]
-        for key in info_item:
-            info_item_temp[key] = info_item[key]
-        otherWritter.write_buffer(info_item_temp)
-otherWritter.write(filekey+'数据下载信息.xlsx')
+    url_map = {
+        '全部': {
+            'key': '全部',
+            'url': 'http://www.gddata.gov.cn/index.php/data/ls/type/0/p/{}.html',
+            'maxpage': 165
+        },
+        '湛江': {
+            'key': '湛江',
+            'url': 'http://www.gddata.gov.cn/index.php/data/ls/type/0/p/{}/v/333.html',
+            'maxpage': 4
+        },
+        '深圳': {
+            'key': '深圳',
+            'url': 'http://www.gddata.gov.cn/index.php/data/ls/type/0/p/{}/v/328.html',
+            'maxpage': 19
+        },
+        '省发展改革委': {
+            'key': '省发展改革委',
+            'url': 'http://www.gddata.gov.cn/index.php/data/ls/type/0/p/{}/d/11.html',
+            'maxpage': 3
+        },
+        '省文化和旅游厅': {
+            'key': '省文化和旅游厅',
+            'url': 'http://www.gddata.gov.cn/index.php/data/ls/type/0/p/{}/u/2/d/30.html',
+            'maxpage': 3
+        }
+    }
+
+    # 如何运行该爬虫：
+    # 下载安装python环境
+    # 下载安装爬虫库 sspider : 使用该命令即可`pip install sspider`
+
+    # 广州开放数据 数据集request,page:163
+    # type/0 数据集
+    # type/1 api
+
+    # range(1) 表示抓取1页，数据集共有164页，如需拆去全部数据，请改为164
+    reqs = [Request(
+        'get', url_map[filekey]['url'].format(i)) for i in range(1, url_map[filekey]['maxpage'])]
+
+    cataSpider.run(reqs)
+    cataSpider.write(filekey+'catalog.xlsx', write_header=True)
+
+    ############################################################################
+
+    # 根据目录信息继续抓取
+    # 获取目录信息
+    cata = cataSpider.getItems(type='dict')
+
+    # 根据目录构建请求,method='get',url,other_info为request可携带存储的与网络请求无关的信息，此处存储数据集名称
+    dimenRequests = [Request('get', i['url'], other_info=i) for i in cata][3:]
+
+    # 运行爬虫
+    dimenSpider.run(dimenRequests)
+    # 数据写入文件
+    dimenSpider.write(filekey+'dimen.xlsx', write_header=True)
+
+    # 同时将数据下载信息单独存储方便查看
+    data = dimenSpider.getItems()
+    downloadInfoWritter = XlsxWritter(writeMode=XlsxWritter.WritterMode.APPEND)
+
+    for item in data:
+        if not (len(item) > 6 or item[6]):
+            downloadInfoWritter.write_buffer({'数据集': item[1]})
+            continue
+        download_info = item[6]
+        for info_item in download_info:
+            info_item_temp = {}
+            info_item_temp['数据集'] = item[1]
+            for key in info_item:
+                try:
+                    info_item_temp[key] = info_item[key]
+                except:
+                    info_item_temp['info'] = info_item
+
+            downloadInfoWritter.write_buffer(info_item_temp)
+    downloadInfoWritter.write(filekey+'数据下载信息.xlsx')

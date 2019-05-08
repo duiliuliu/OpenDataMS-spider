@@ -4,8 +4,7 @@
 from .util import createInstance
 from .constants import non
 
-# 对相应的类容执行函数，
-
+# 对相应的类容执行函数
 
 class DataSet(object):
 

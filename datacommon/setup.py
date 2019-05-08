@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="datacommon",
-    version="1.0.7",
+    version="1.0.10",
     author="pengr",
     author_email="pengrui55555@163.com",
     description="A simple framework about data analysis.",
@@ -15,7 +15,9 @@ setup(
     packages=['datacommon'],
     install_requires=[
         "xlwt",
-        "xlsxwriter"
+        "xlsxwriter",
+        "xlrd",
+        "chardet"
     ],
     classifiers=[
         "Environment :: Console",

@@ -1,21 +1,31 @@
 # -*- coding: utf-8 -*-
 # author: pengr
 
+from .util import guessTextEncode
+
 
 def getFileData(filename,):
-    suffix = filename.split('.')[-1]
-    if suffix == 'xls' or 'xlsx':
+    suffix = filename.split('.')[-1].upper()
+    if suffix == 'XLS' or suffix == 'XLSX':
         return getXlsData(filename)
-    elif suffix == 'csv':
+    elif suffix == 'CSV':
+        with open(filename, 'rb') as f:
+            encoding = guessTextEncode(f.read())
+        if encoding:
+            return getCsvData(filename, encoding=encoding)
         return getCsvData(filename)
-    elif suffix == 'json':
-        return getJsonData(filename)
+    elif suffix == 'JSON':
+        with open(filename, 'rb') as f:
+            encoding = guessTextEncode(f.read())
+        if encoding:
+            return getCsvData(filename, encoding=encoding)
+        return getJsonData(filename, encoding=encoding)
 
 
 import csv
 
 
-def getCsvData(filename, encoding='gbk', delimiter=','):
+def getCsvData(filename, encoding='utf-8', delimiter=','):
     # csv文件中许多无效列
     with open(filename, encoding=encoding) as f:
         items = [row for row in csv.reader(f, delimiter=delimiter)]
@@ -38,8 +48,8 @@ def getXlsData(filename):
 import json
 
 
-def getJsonData(filename):
-    fp = open(filename, 'r')
+def getJsonData(filename, encoding='utf-8'):
+    fp = open(filename, 'r', encoding=encoding)
     return json.load(fp)
 
 

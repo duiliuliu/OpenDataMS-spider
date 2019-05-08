@@ -5,6 +5,7 @@ source
 *json
 *xls
 *log
+*.tar.gz
 script.md
 
 
