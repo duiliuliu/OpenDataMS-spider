@@ -43,10 +43,10 @@ def guessTextEncode(text):
     return None
 
 
-# 根据数据集建立目录
+
 import os
 
-
+# 根据数据集建立目录
 def saveContent(path, content):
     if os.path.exists(path):
         return
@@ -55,6 +55,16 @@ def saveContent(path, content):
         os.makedirs(dir)
     with open(path, 'wb') as f:
         f.write(content)
+
+# 罗列文件
+def listFile(dir='source'):
+    # 读取source文件夹下所有文件
+    # @param: str
+    file_list = []
+    for root, _, files in os.walk(dir):
+        for file in files:
+            file_list.append(os.path.join(root, file))
+    return file_list
 
 
 # 判断空数据

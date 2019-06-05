@@ -4,43 +4,10 @@ import time
 
 from datacommon import util
 
+
 seed_url = 'http://www.gddata.gov.cn'
 
 # 获取数据集目录的解析器
-
-
-class CatalogParser(HtmlParser):
-    def parse(self, response):
-        doc = response.html()
-        block_path = '/html/body/div[1]/div[2]/div[3]/div[1]/div/div[2]/ul/li'
-        blocks = doc.xpath(block_path)
-
-        items = []
-        for i in range(1, len(blocks)+1):
-            labels_preview = doc.xpath(
-                block_path+'[{}]/p/label/text()'.format(i))
-            labels_foramt = doc.xpath(
-                block_path+'[{}]/p/span/label/text()'.format(i))
-            items.append({
-                'url': seed_url + doc.xpath(block_path+'[{}]/p[1]/a/@href'.format(i))[0],
-                'name': doc.xpath(block_path+'[{}]/p[1]/a/text()'.format(i))[0].strip(),
-                '已下载次数': doc.xpath(block_path+'[{}]/p/span[3]/text()'.format(i))[0].strip(),
-                '访问量': doc.xpath(block_path+'[{}]/p/span[4]/text()'.format(i))[0].strip(),
-                '预览标签': ','.join(labels_preview),
-                '格式标签': ','.join(labels_foramt)
-            })
-
-        # data = [[seed_url + url.get('href'), url.xpath('string(.)')]
-        #         for url in urls]
-
-        return [], items
-
-
-# 数据写入类，此处使用xlsx格式数据写入
-writter = XlsxWritter(writeMode=XlsxWritter.WritterMode.EXTEND)
-
-# 建立爬虫对象，解析类是CatalogParser
-cataSpider = Spider(name='cataSpider', parser=CatalogParser(), writter=writter)
 
 
 # 数据集详细页面有以下几种情况：
@@ -162,48 +129,25 @@ dimenSpider = Spider(
 
 
 if __name__ == '__main__':
-    # 通过filekey指定不同城市或者不同政府机构，支持以下四个
-    filekey = '全部'
+    from cataSpider import cataSpider, getCataIndex
 
-    url_map = {
-        '全部': {
-            'key': '全部',
-            'url': 'http://www.gddata.gov.cn/index.php/data/ls/type/0/p/{}.html',
-            'maxpage': 165
-        },
-        '湛江': {
-            'key': '湛江',
-            'url': 'http://www.gddata.gov.cn/index.php/data/ls/type/0/p/{}/v/333.html',
-            'maxpage': 4
-        },
-        '深圳': {
-            'key': '深圳',
-            'url': 'http://www.gddata.gov.cn/index.php/data/ls/type/0/p/{}/v/328.html',
-            'maxpage': 19
-        },
-        '省发展改革委': {
-            'key': '省发展改革委',
-            'url': 'http://www.gddata.gov.cn/index.php/data/ls/type/0/p/{}/d/11.html',
-            'maxpage': 3
-        },
-        '省文化和旅游厅': {
-            'key': '省文化和旅游厅',
-            'url': 'http://www.gddata.gov.cn/index.php/data/ls/type/0/p/{}/u/2/d/30.html',
-            'maxpage': 3
-        }
-    }
+    # 通过filekey指定不同城市或者不同政府机构，支持以下四个
+    filekey = '深圳市'
+
+    cataInfo = getCataIndex(key=filekey, classfied='city')
 
     # 如何运行该爬虫：
     # 下载安装python环境
     # 下载安装爬虫库 sspider : 使用该命令即可`pip install sspider`
 
-    # 广州开放数据 数据集request,page:163
     # type/0 数据集
     # type/1 api
 
-    # range(1) 表示抓取1页，数据集共有164页，如需拆去全部数据，请改为164
-    reqs = [Request(
-        'get', url_map[filekey]['url'].format(i)) for i in range(1, url_map[filekey]['maxpage'])]
+    reqs = []
+
+    for dataItem in cataInfo:
+        for fileItem in dataItem['items']:
+            reqs.append(Request('get', fileItem['url'], other_info=fileItem))
 
     cataSpider.run(reqs)
     cataSpider.write(filekey+'catalog.xlsx', write_header=True)

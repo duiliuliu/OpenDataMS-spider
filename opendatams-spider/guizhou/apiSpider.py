@@ -1,10 +1,10 @@
 from sspider import Spider, Request, HtmlParser, XlsxWritter, JsonWritter
 import requests
-from proxyPool import ProxyPool
+import time
+# from proxyPool import ProxyPool
 
-import sys
-sys.path.append('..')
-from util import saveContent
+
+from datacommon.util import saveContent
 
 # 如何运行该爬虫：
 # 下载安装python环境
@@ -18,7 +18,7 @@ from util import saveContent
 
 # url
 url = 'http://data.guizhou.gov.cn/dataopen/api/dataset'
-file_key = '贵州api'
+file_key = '贵州全部api--'
 
 
 # 请求沉睡时间，防止一瞬间过多的请求被目的网站封禁，单位：秒
@@ -46,7 +46,7 @@ def getParams(pageNo,):
 
 # range(1) 表示抓取1页，数据集共有143页，如需拆去全部数据，请改为143
 reqs = [Request(
-    'get', url, params=getParams(i)) for i in range(1, 2)]
+    'get', url, params=getParams(i)) for i in range(1, 144)]
 
 
 # 获取数据集目录的解析器
@@ -78,7 +78,7 @@ writter = XlsxWritter(writeMode=XlsxWritter.WritterMode.EXTEND)
 
 
 # 建立爬虫对象，解析类是CatalogParser
-cataSpider = Spider(parser=CatalogParser(), writter=writter)
+cataSpider = Spider(name="cataSpider",parser=CatalogParser(), writter=writter)
 cataSpider.run(reqs)
 # 数据保存
 cataSpider.write(file_key+'catalog.xlsx', write_header=True)
@@ -90,7 +90,7 @@ cataSpider.write(file_key+'catalog.xlsx', write_header=True)
 cata = cataSpider.getItems(type='dict')
 
 # 代理
-ppool = ProxyPool()
+# ppool = ProxyPool()
 
 url_template = 'http://data.guizhou.gov.cn/dataopen/api/dataset/{}/apidata?callback=jQuery111305121739185053189_1555829556219&_=1555829556226'
 
@@ -132,24 +132,27 @@ class DimensionParser(HtmlParser):
         item = response.request.other_info
         try:
             item['接口地址'] = data['ifsAddr']
-            res = requests.get(data['ifsAddr'], proxies=ppool.push())
+            start = time.time()
+            res = requests.get(data['requestDemo'])
             if res.status_code == 200 and res.text:
                 item['API_AVALIABLE'] = '可用'
                 # 如需下载接口数据，去掉下方注释即可
-                # path = 'source/'+item['name']+'.'+data['supportFormat']
-                # saveContent(path, res.content)
+                print(item['数据名称'],'可用')
+                path = 'source/'+item['数据名称']+'.'+data['supportFormat']
+                saveContent(path, res.content)
             else:
                 item['API_AVALIABLE'] = '不可用'
+            item['测试响应时长'] = time.time()-start
             if 'supportFormat' in data:
                 item['支持格式'] = data['supportFormat']
                 # 对格式验证
                 # pass
-                # item[FORMAT_VALID] = '可用'
-            item['请求方式'] = data['requestMode']
-            item[REQUEST_DEMO] = data['requestDemo']
-            item[REQUEST_MODE] = data['argsDesc']
-            item[RESPONSE_MODE] = data['returnValDesc']
-            item[RESPONSE_DEMO] = data['returnDemo']
+
+            for key in data:
+                if key in item:
+                    item[key+'~1'] = data[key]
+                else:
+                    item[key] = data[key]
         except Exception as e:
             item['API_AVALIABLE'] = '接口详情页面异常'+str(e)
         # 返回下一次爬取的请求集合与解析到的数据
@@ -160,9 +163,9 @@ class DimensionParser(HtmlParser):
 dimenInfoWritter = XlsxWritter(writeMode=XlsxWritter.WritterMode.APPEND)
 # dimenInfoWritter = JsonWritter(writeMode=JsonWritter.WritterMode.APPEND)
 # json格式写入
-dimenSpider = Spider(parser=DimensionParser(), writter=dimenInfoWritter)
+dimenSpider = Spider(name='dimenspider',parser=DimensionParser(), writter=dimenInfoWritter)
 # 运行爬虫
 dimenSpider.run(dimenRequests)
 # 数据写入文件
-dimenSpider.write(file_key+'dimen.xlsx')
+dimenSpider.write(file_key+'dimen.xlsx',write_header=True)
 # dimenSpider.write('dimen.json')

@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 # author: pengr
 
-from .util import createInstance
-from .constants import non
+from datacommon.util import createInstance
+from datacommon.constants import non
+import hashlib
 
 # 对相应的类容执行函数
+
 
 class DataSet(object):
 
@@ -16,7 +18,8 @@ class DataSet(object):
         fill_flag = False
         if not ncols:
             for row in data:
-                fill_flag = True if len(row) != self.__ncols else False or fill_flag
+                fill_flag = True if len(
+                    row) != self.__ncols else False or fill_flag
                 if len(row) > self.__ncols:
                     self.__ncols = len(row)
         if fill_flag:
@@ -44,12 +47,18 @@ class DataSet(object):
         new_task = DataSet(items)
         return new_task
 
-    def distinct(self, col=0):
-        res = set()
-        for row in self.__data:
-            res.add(str(row[col]))
-
-        new_task = DataSet([list(res)])
+    def distinct(self, *cols):
+        cols = self.__check(cols)
+        tempSet = set()
+        repestIndex = set()
+        for rowIndex in range(len(self.__data)):
+            row = self.__data[rowIndex]
+            digest = self.__digest([row[col] for col in cols])
+            if digest in tempSet:
+                repestIndex.add(rowIndex)
+            else:
+                tempSet.add(digest)
+        new_task = DataSet([self.__data[i] for i in range(len(self.__data)) if i not in repestIndex])
         return new_task
 
     def count(self, *cols):
@@ -109,6 +118,11 @@ class DataSet(object):
             return param_cols
         return [i for i in range(self.__ncols)]
 
+    def __digest(self, obj):
+        md5 = hashlib.md5()
+        md5.update(obj.__str__().encode('utf-8'))
+        return md5.hexdigest()[8:-8]
+
     def __fill(self, nrows, ncols):
         while len(self.__data) < nrows:
             self.__data.append([])
@@ -126,6 +140,7 @@ if __name__ == '__main__':
 
     stringData = [
         ['asda', 'asda', 'dwqwe', 'qweq'],
+        ['weqcas', 'defsw', 'deqwa', 'ewqwq'],
         ['weqcas', 'defsw', 'deqwa', 'ewqwq']
     ]
 
@@ -135,11 +150,14 @@ if __name__ == '__main__':
         [non, 'none', 'null']
     ]
 
-    task1 = DataSet(numberData)
-    task1.min(1, 3)
-    print(task1)
+    task3 = DataSet(stringData)
+    print(task3.distinct())
 
-    task2 = DataSet(nonTestData)
-    task2.count(0, 1, 2, 3)
-    print(task2)
-    print(task2.count(0, 1, 2, 3).runUDF('PerfectionUDF', nrows=task2.nrows))
+    # task1 = DataSet(numberData)
+    # task1.min(1, 3)
+    # print(task1)
+
+    # task2 = DataSet(nonTestData)
+    # task2.count(0, 1, 2, 3)
+    # print(task2)
+    # print(task2.count(0, 1, 2, 3).runUDF('PerfectionUDF', nrows=task2.nrows))

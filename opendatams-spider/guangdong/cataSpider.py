@@ -1,6 +1,7 @@
 from sspider import Spider, Request, RequestManager, HtmlParser, XlsxWritter, JsonWritter
 
-from datacommon import util
+from datacommon import reader
+import re
 
 seed_url = 'http://www.gddata.gov.cn'
 
@@ -78,7 +79,7 @@ class CatalogParser(HtmlParser):
         block_path = '/html/body/div[1]/div[2]/div[3]/div[1]/div/div[2]/ul/li'
         blocks = doc.xpath(block_path)
 
-        info = response.request.other_info
+        info = response.request.other_info if response.request.other_info is not None else {}
         items = []
         for i in range(1, len(blocks)+1):
             labels_preview = doc.xpath(
@@ -100,7 +101,7 @@ class CatalogParser(HtmlParser):
 
         nextReqNode = doc.xpath(
             '/html/body/div[1]/div[2]/div[3]/div[1]/div/div[2]/div[2]/div/a[@class="next"]')
-
+        
         if nextReqNode and len(nextReqNode) > 0:
             nextRequest = [Request(
                 'get', seed_url+nextReqNode[0].get('href'), other_info=info)]
@@ -115,6 +116,63 @@ writter = XlsxWritter(writeMode=XlsxWritter.WritterMode.EXTEND)
 
 # 建立爬虫对象，解析类是CatalogParser
 cataSpider = Spider(name='cataSpider', parser=CatalogParser(), writter=writter)
+
+
+def getCataIndex(key, classfied):
+    # 获取分类文件信息，依赖于当前目录下分类关系文件
+    # @param: key :: string :: 目录关键词
+    # @param: classfied :: string :: 分类方式，有主题分类(topic)，政府机构分类(agency),地市分类(city)
+    fileDict = {
+        'topic': 'topicCata.xlsx',
+        'agency': 'agencyCata.xlsx',
+        'city': 'cityCata.xlsx',
+    }
+
+    if key == 'all' and classfied == 'all':
+        res = []
+        for i in fileDict:
+            res.extend(getCataIndex('all', i))
+        return res
+
+    filename = fileDict[classfied]
+
+    catalog = reader.getFileData(filename)
+    cataDict = {}
+    for item in catalog[1:]:
+        name = item[0].split('(')[0].strip()
+        if name not in cataDict:
+            cataDict[name] = {}
+            cataDict[name]['items'] = []
+            cataDict[name]['info'] = {
+                'name': name,
+                'url': item[1],
+                'num': item[2]
+            }
+        cataDict[name]['items'].append({
+            'url': item[3],
+            'name': item[4],
+            '下载次数': item[5],
+            '访问次数': item[6],
+            # '下载次数': re.search('\d+', item[5])[0] if re.search('\d+', item[5]) else '',
+            # '访问次数': re.search('\d+', item[6])[0] if re.search('\d+', item[6]) else '',
+            '预览标签': item[7],
+            '格式标签': item[8]
+        })
+
+    if key in cataDict:
+        return [cataDict[key]]
+
+    res = []
+
+    if key == 'all':
+        for itemKey in cataDict:
+            res.append(cataDict[itemKey])
+        return res
+
+    for itemKey in cataDict:
+        if key in itemKey:
+            res.append(cataDict[itemKey])
+    return res
 
 
 if __name__ == '__main__':

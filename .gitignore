@@ -5,7 +5,11 @@ source
 *json
 *xls
 *log
-*.tar.gz
+*tar.gz
+*zip
+*doc
+*dmp
+*xml
 script.md
 
 

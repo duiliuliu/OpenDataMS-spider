@@ -18,8 +18,18 @@ def getFileData(filename,):
         with open(filename, 'rb') as f:
             encoding = guessTextEncode(f.read())
         if encoding:
-            return getCsvData(filename, encoding=encoding)
+            return getJsonData(filename, encoding=encoding)
         return getJsonData(filename, encoding=encoding)
+    elif suffix == 'XML':
+        return getXmlData(filename)
+    elif suffix == 'TXT':
+        with open(filename, 'rb') as f:
+            encoding = guessTextEncode(f.read())
+        if encoding:
+            return getTxtData(filename, encoding=encoding)
+        return getTxtData(filename, encoding=encoding)
+    else:
+        raise KeyError("无效的格式")
 
 
 import csv
@@ -51,6 +61,25 @@ import json
 def getJsonData(filename, encoding='utf-8'):
     fp = open(filename, 'r', encoding=encoding)
     return json.load(fp)
+
+
+def getTxtData(filename, encoding='utf-8'):
+    with open(filename, 'r', encoding=encoding) as f:
+        content = f.read()
+    return content
+
+
+from lxml import etree
+
+
+def getXmlData(filename, encoding='utf-8'):
+    data = []
+    docTree = etree.parse(filename, etree.XMLParser())
+    root = docTree.getroot()
+    items = root.getchildren()
+    for item in items:
+        data.append([i.text for i in item.getchildren()])
+    return data
 
 
 if __name__ == '__main__':

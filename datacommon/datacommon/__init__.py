@@ -20,4 +20,4 @@ __copyright__ = 'Copyright 2019 Pengr'
 from . import util
 from .constants import non
 from .reader import getCsvData, getXlsData
-from .dataSet import DataSet,UDF
+from .dataSet import DataSet

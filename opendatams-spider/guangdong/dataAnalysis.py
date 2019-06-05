@@ -7,6 +7,7 @@ from datacommon import reader, DataSet
 
 def perfection(data):
     # 单个文件完整性统计
+    # @param: DateSet
     result = data.runUDF('DropInvalidColumnsUDF').count().runUDF(
         'PerfectionUDF', nrows=data.nrows)
     return result.data[0][-1]
@@ -14,12 +15,17 @@ def perfection(data):
 
 def dateFormat(data, format='%Y-%m-%d'):
     # 获取时间格式列
+    # @param: DateSet,str
     columns = data.runUDF('GetDateColumns').distinct()
     new_col = []
     for col in columns.data[0]:
-        if len(col) > 2:
+        if len(col) > 2 and type(col) == str:
             col = col[1:-1]
             new_col.extend([int(i) for i in col.split(',')])
+        elif type(col) == list:
+            new_col.extend(col)
+        else:
+            print('-------------', col)
 
     # 判断时间格式
     date_result = data.runUDF('IsTruthDateFormatUDF', *new_col, format=format)
@@ -32,11 +38,14 @@ def dateFormat(data, format='%Y-%m-%d'):
 
 
 def avg(items):
-    # 数据集完整性统计
+    # 均值计算--数据集完整性统计
+    # @param: list
     return sum(items)/len(items)
 
 
-def fileAnalysis(filename,date_format):
+def fileAnalysis(filename, date_format):
+    # 数据文件质量分析
+    # @param: str,str
     data = reader.getFileData(filename)
     data = DataSet(data)
     # 完整率
@@ -49,17 +58,24 @@ def fileAnalysis(filename,date_format):
     # 时效性
 
     # 是否满足唯一性
+    unique = 1 if data.nrows == data.distinct().nrows else 0
 
-    return item_perfaction,(date_format,date_format_per)
+    result = [item_perfaction, date_format, date_format_per, unique]
+
+    key = filename if len(filename) < 40 else filename[:40]+'...'
+    print('{}  -- 完整率：{:<.2%} - 时间： {} {} - 唯一性： {}'.format(key, *result))
+
+    return result
 
 
 import os
-# 读取source文件夹下所有文件
 
 
 def listFile(dir='source'):
+    # 读取source文件夹下所有文件
+    # @param: str
     file_list = []
-    for root, dirs, files in os.walk(dir):
+    for root, _, files in os.walk(dir):
         for file in files:
             file_list.append(os.path.join(root, file))
     return file_list
@@ -69,7 +85,7 @@ if __name__ == '__main__':
 
     # 文件路径
     path_str = 'source'
-    filekey = '深圳'
+    filekey = '全部'
     date_format_key = '%Y-%m-%d'
 
     log = Logger(filekey+'-'+__file__.split('.')[0])
@@ -85,7 +101,8 @@ if __name__ == '__main__':
     # 根据路径获取路径下的所有文件
     downloadInfo = [[os.path.basename(i), i]
                     for i in listFile(dir=path_str)]
-    downloadInfo.insert(0, ['名称', '路径', '完整率', '日期格式判定('+date_format_key+')'])
+    downloadInfo.insert(
+        0, ['名称', '路径', '完整率', '日期格式判定('+date_format_key+')', '唯一性'])
 
     items_perfaction = []
     dates_percentage = []
@@ -102,34 +119,9 @@ if __name__ == '__main__':
         path = item[path_index]
         # 读取数据
         try:
-            data = reader.getFileData(path)
-            data = DataSet(data)
-            # 单个文件完整率
-            item_perfaction = perfection(data)
-
-            # 时间格式判断
-            date_format, date_format_per = dateFormat(
-                data, format=date_format_key)
-
-            log.info(
-                '{:<20} --完整率： {:<.2%} , -- {:<20}'.format(item[name_index], item_perfaction, date_format))
-
-            item.append(item_perfaction)
-            item.append(date_format)
-            if date_format_per != -1:
-                dates_percentage.append(date_format_per)
-            items_perfaction.append(item_perfaction)
+            item.extend(fileAnalysis(path, date_format_key))
         except Exception as e:
-            log.exception(item + '==='+str(e))
-
-    data_item_perfection = avg(items_perfaction)
-    date_format_percentage = avg(dates_percentage)
-
-    print('数据完整率：', data_item_perfection)
-    print('日期合格率：', date_format_percentage)
-
-    downloadInfo.append(['数据完整率：', data_item_perfection])
-    downloadInfo.append(['日期格式匹配率：', date_format_percentage])
+            log.exception(path + '==='+str(e))
 
     writter = XlsxWritter(writeMode=XlsxWritter.WritterMode.APPEND)
     writter.write(filekey+'数据统计.xlsx', data=downloadInfo, write_header=False)

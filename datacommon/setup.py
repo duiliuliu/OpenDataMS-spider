@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="datacommon",
-    version="1.0.10",
+    version="1.1.6",
     author="pengr",
     author_email="pengrui55555@163.com",
     description="A simple framework about data analysis.",
