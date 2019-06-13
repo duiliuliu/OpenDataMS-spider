@@ -4,17 +4,12 @@
 # 读取文件、
 # 完整性分析
 # 一致性
+# 唯一性
 # 日期格式
 
 from sspider import XlsxWritter, TxtWritter
 from datacommon import reader, DataSet
 from datacommon.util import listFile
-
-
-def avg(items):
-    # 均值计算--数据集完整性统计
-    # @param: list
-    return sum(items)/len(items)
 
 
 def perfection(data):
@@ -64,8 +59,8 @@ for dir in dirs:
     try:
         data = reader.getFileData(dir)
         item['名称'] = dir
-    except:
-        item['异常'] = '文件解析失败！'
+    except Exception as e:
+        item['异常'] = str(e)
         continue
 
     try:

@@ -1,8 +1,15 @@
-# # -*- coding: utf-8 -*-
-# # author: pengr
+# -*- coding: utf-8 -*-
+# author: pengr
 
-from sspider import XlsxWritter, TxtWritter, Logger
+# 读取文件、
+# 完整性分析
+# 一致性
+# 日期格式
+
+from sspider import XlsxWritter, TxtWritter
 from datacommon import reader, DataSet
+from datacommon.util import listFile
+
 
 
 def perfection(data):
@@ -33,95 +40,52 @@ def dateFormat(data, format='%Y-%m-%d'):
     date_per = date_result.count().runUDF('PerfectionUDF', nrows=date_result.nrows)
 
     if len(new_col) == 0:
-        return '未发现日期格式数据列', -1
+        return '日期格式一致', 1
     return '日期格式列： {}, 日期格式合格率: {:<.2%}' .format(','.join([str(i) for i in new_col]), date_per.data[0][-1]), date_per.data[0][-1]
 
 
-def avg(items):
-    # 均值计算--数据集完整性统计
-    # @param: list
-    return sum(items)/len(items)
-
-
-def fileAnalysis(filename, date_format):
-    # 数据文件质量分析
-    # @param: str,str
-    data = reader.getFileData(filename)
-    data = DataSet(data)
-    # 完整率
-    item_perfaction = perfection(data)
-
-    # 时间格式判断
-    date_format, date_format_per = dateFormat(
-        data, format=date_format)
-
-    # 时效性
-
-    # 是否满足唯一性
+def uniques(data):
+    # 一致性
     unique = 1 if data.nrows == data.distinct().nrows else 0
-
-    result = [item_perfaction, date_format, date_format_per, unique]
-
-    key = filename if len(filename) < 40 else filename[:40]+'...'
-    print('{}  -- 完整率：{:<.2%} - 时间： {} {} - 唯一性： {}'.format(key, *result))
-
-    return result
+    return unique
 
 
-import os
+dirs = listFile("source")
 
 
-def listFile(dir='source'):
-    # 读取source文件夹下所有文件
-    # @param: str
-    file_list = []
-    for root, _, files in os.walk(dir):
-        for file in files:
-            file_list.append(os.path.join(root, file))
-    return file_list
+res = []
 
+for dir in dirs:
+    item = {}
+    item['名称'] = dir
+    try:
+        data = reader.getFileData(dir)
+    except Exception as e:
+        item['异常'] = str(e)
+        res.append(item)
+        continue
 
-if __name__ == '__main__':
+    try:
+        data = DataSet(data)
+        # 完整度
+        per = perfection(data)
+        # 日期一致性
+        df = dateFormat(data)
+        # 唯一性
+        uni = uniques(data)
+        result = [per, df[0], df[1], uni]
 
-    # 文件路径
-    path_str = 'source'
-    filekey = '全部'
-    date_format_key = '%Y-%m-%d'
+        print('{}  -- 完整率：{:<.2%} - 时间： {} {} - 唯一性： {}'.format(dir, *result))
 
-    log = Logger(filekey+'-'+__file__.split('.')[0])
+        item['完整性'] = '{:<.2%}'.format(per)
+        item['日期一致性'] = df[1]
+        item['唯一性'] = uni
+    except Exception as e:
+        item['异常'] = str(e)
 
-    # 通过文件路径访问文件
-
-    # 根据存储的下载信息进行读取文件路径
-    # downloadInfoFile = filekey+'数据下载信息.xlsx'
-    # downloadInfo = reader.getFileData(downloadInfoFile)
-    # downloadInfo[0].append('完整率')
-    # downloadInfo[0].append('日期格式判定('+date_format_key+')')
-
-    # 根据路径获取路径下的所有文件
-    downloadInfo = [[os.path.basename(i), i]
-                    for i in listFile(dir=path_str)]
-    downloadInfo.insert(
-        0, ['名称', '路径', '完整率', '日期格式判定('+date_format_key+')', '唯一性'])
-
-    items_perfaction = []
-    dates_percentage = []
-
-    error = []
-
-    # 读取信息中路径索引列
-    path_index = 1
-    # 读取信息中文件名索引列
-    name_index = 0
-
-    # 通过文件路劲读取文件，计算完整率
-    for item in downloadInfo[1:]:
-        path = item[path_index]
-        # 读取数据
-        try:
-            item.extend(fileAnalysis(path, date_format_key))
-        except Exception as e:
-            log.exception(path + '==='+str(e))
-
-    writter = XlsxWritter(writeMode=XlsxWritter.WritterMode.APPEND)
-    writter.write(filekey+'数据统计.xlsx', data=downloadInfo, write_header=False)
+    res.append(item)
+    
+writter = XlsxWritter()
+for i in res:
+    writter.write_buffer(i)
+writter.write('数据统计.xlsx',write_header=True)

@@ -29,7 +29,7 @@ def getFileData(filename,):
             return getTxtData(filename, encoding=encoding)
         return getTxtData(filename, encoding=encoding)
     else:
-        raise KeyError("无效的格式")
+        raise KeyError("无法解析的数据格式！")
 
 
 import csv

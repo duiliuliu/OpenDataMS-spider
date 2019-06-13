@@ -11,11 +11,6 @@ from datacommon import reader, DataSet
 from datacommon.util import listFile
 
 
-def avg(items):
-    # 均值计算--数据集完整性统计
-    # @param: list
-    return sum(items)/len(items)
-
 
 def perfection(data):
     # 单个文件完整性统计
@@ -64,8 +59,8 @@ for dir in dirs:
     try:
         data = reader.getFileData(dir)
         item['名称'] = dir
-    except:
-        item['异常'] = '文件解析失败！'
+    except Exception as e:
+        item['异常'] = str(e)
         continue
 
     try:
@@ -87,7 +82,7 @@ for dir in dirs:
         item['异常'] = str(e)
 
     res.append(item)
-    
+
 writter = XlsxWritter()
 for i in res:
     writter.write_buffer(i)
